@@ -38,3 +38,6 @@ rm(a)
 
 #remove all objects
 rm(list=ls())
+
+#turn off scientific notation
+options(scipen=999)

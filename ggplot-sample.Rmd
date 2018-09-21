@@ -1,0 +1,282 @@
+---
+title: "ggplot-sample code"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(ggplot2)
+```
+
+**Bigpicture**
+The main difference is that, unlike base graphics, ggplot works with dataframes and 
+not individual vectors. All the data needed to make the plot is typically contained 
+within the dataframe supplied to the ggplot()
+The second main difference is that you can keep enhancing the plot by adding more layers
+to an existing plot. 
+
+Structure: The principal components of every plot can be defined as follows:
+data: is a data frame
+Aesthetics: is used to indicate x and y variables. It can also be used to control the color, the size or the shape of points, the height of bars, etc…..
+Geometry: corresponds to the type of graphics (histogram, box plot, line plot, density plot, dot plot, ….)
+
+```{r, message=FALSE, warning=FALSE}
+library(ggplot2)
+```
+
+```{r}
+print(mpg)
+```
+
+```{r}
+# With ggplot2, you begin a plot with the function ggplot(). 
+# ggplot() creates a coordinate system that you can add layers to. 
+# The first argument of ggplot() is the dataset to use in the graph. 
+# So ggplot(data = mpg) creates an empty graph.
+# The function geom_point() adds a layer of points to your plot, which creates a scatterplot. 
+# ggplot2 comes with many geom functions that each add a different type of layer to a plot.
+# Each geom function in ggplot2 takes a mapping argument. This defines how variables in your dataset are mapped to visual properties. 
+# The mapping argument is always paired with aes(), and the x and y arguments of aes() 
+# specify which variables to map to the x and y axes.
+
+#ggplot(data = <DATA>) + 
+#  <GEOM_FUNCTION>(mapping = aes(<MAPPINGS>))
+p <- ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy))
+print(p)
+```
+
+```{r}
+p <- ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color = class))
+print(p)
+```
+
+```{r}
+p <- ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, size = class))
+print(p)
+```
+
+```{r}
+#to make all points coloured blue
+p <- ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), color = "blue")
+print(p)
+```
+
+```{r}
+#Example case where we want to fit a regression line- fit gives, regression fit
+ggplotReg <- function(fit){
+  ggplot(fit$model, aes_string(x=names(fit$model)[2], y=names(fit$model)[1])) +
+    geom_point() +
+    stat_smooth(method = "lm",col="red") +
+    labs(title = paste("Adj R2 = ",signif(summary(fit)$adj.r.squared, 4),
+                       "Intercept = ",signif(fit$coef[[1]],4), 
+                       "Slope = ",signif(fit$coef[[2]],4),
+                       "P = ",signif(summary(fit)$coef[2,4], 4)))
+}
+```
+
+**Different types of plots**
+  Reference: http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
+
+**1. correlation**
+
+Plots for determining how well correlated two variables are
+  
+  **1.1 Scatterplot**
+
+```{r, warning=FALSE}
+options(scipen=999)  #turn off scientific notation (e.g. 1e=48)
+theme_set(theme_bw()) #pre-set the bw theme, decides non-data display
+data("midwest",package = "ggplot2")
+head(midwest)
+
+#X-axis: area,
+#y-axis: total population
+#the points- coloured according to state,and size of points gives population density
+#fit a smoothing line-use loess method, do not show confidence intervals around the line
+#xlim and ylim will set the limits of values across X-axis and Y-axis
+#labs argument will give labels
+gg <- ggplot(midwest, aes(x=area,y=poptotal)) +
+      geom_point(aes(col=state,size=popdensity)) +
+      geom_smooth(method="loess", se=F) +
+      xlim(c(0, 0.1)) + 
+      ylim(c(0, 500000)) +
+      labs(subtitle="Area Vs Population", 
+            y="Population", 
+            x="Area", 
+            title="Scatterplot", 
+            caption = "Source: midwest")
+
+print(gg)
+
+```
+
+**1.2 Scatterplot with encircling **
+```{r, warning=FALSE}
+library(ggalt) #library for geom_encircle
+
+#Need to select the data subset which should be encircled, midwest_select below
+#represent the data that needs to be encircled.
+midwest_select <- midwest[midwest$poptotal > 350000 & 
+                            midwest$poptotal <= 500000 & 
+                            midwest$area > 0.01 & 
+                            midwest$area < 0.1, ]
+ggplot(midwest, aes(x=area, y=poptotal)) + 
+  geom_point(aes(col=state, size=popdensity)) +   # draw points
+  geom_smooth(method="loess", se=F) + 
+  xlim(c(0, 0.1)) + 
+  ylim(c(0, 500000)) +   # draw smoothing line
+  geom_encircle(aes(x=area, y=poptotal), 
+                data=midwest_select, 
+                color="red", 
+                size=2, 
+                expand=0.08) +   # encircle
+  labs(subtitle="Area Vs. Population", 
+       y="Population", 
+       x="Area", 
+       title="Scatterplot + Encircle", 
+       caption="Source: midwest")
+```
+
+**1.2 Scatterplot where there are many overlapping points **
+```{r, warning=FALSE}
+# option 1- add jitter ***#
+#if there are a lot of overlapping points, jitterplot will introduce some jitter to the data
+data(mpg,package="ggplot2")
+theme_set(theme_bw())
+ggplot(mpg,aes(cty,hwy)) +
+  geom_jitter(width=0.5,size=1) +
+  labs(subtitle = "mpg:city vs. highway mileage",
+       y="hwy",
+       x="city",
+       title = "Jittered Points")
+
+# option 2- counts chart; wherever there is more overlap, the size of the circle gets bigger ***#
+data(mpg, package="ggplot2")
+theme_set(theme_bw())
+ggplot(mpg,aes(x=cty,y=hwy)) +
+  geom_count(col="tomato3",show.legend = F) +
+  labs(subtitle = "mpg:city vs. highway mileage",
+       y="hwy",
+       x="city",
+       title = "Counts Plot")
+```
+
+**1.3 Bubble chart**
+```{r, warning=FALSE}
+#Bubble chart serves well if you want to understand relationship within the underlying groups based on:
+# A Categorical variable (by changing the color) and
+# Another continuous variable (by changing the size of points).
+
+mpg_select <- mpg[mpg$manufacturer %in% c("audi", "ford", "honda", "hyundai"), ]
+g <- ggplot(mpg_select, aes(displ, cty)) + 
+  labs(subtitle="mpg: Engine-Displacement vs City Mileage",
+       title="Bubble chart")
+g + geom_jitter(aes(col=manufacturer, size=hwy)) + 
+  geom_smooth(aes(col=manufacturer), method="lm", se=F)
+```
+
+**1.4 Correlation of multiple continuous variables present in the same dataframe. (correlation matrix)**
+```{r, warning=FALSE}
+library(ggcorrplot)
+data(mtcars)
+corr <- round(cor(mtcars), 1)
+ggcorrplot(corr, hc.order = TRUE,
+           type = "lower",
+           lab = TRUE,
+           lab_size = 3,
+           method = "circle",
+           colors = c("tomato2","white","springgreen3"),
+           title = "Correlogram of mtcars",
+           ggtheme = theme_bw)
+```
+
+**2. Deviation**
+Compare variation in values between small number of items (or categories) with respect to a fixed reference.
+The below plot will show for a range of car brands, how far the mileage is above/below from the average
+
+```{r, warning=FALSE}
+data(mtcars)
+mtcars$'car name' <- rownames(mtcars)  #create new column for car names
+mtcars$mpg_z <- round((mtcars$mpg - mean(mtcars$mpg))/sd(mtcars$mpg),2) #normalized mpg
+mtcars$mpg_type <- ifelse(mtcars$mpg_z < 0, "below","above") #above/below avg
+mtcars <- mtcars[order(mtcars$mpg_z),] #sort
+mtcars$'car name' <- factor(mtcars$'car name',levels = mtcars$`car name`)
+
+ggplot(mtcars, aes(x=`car name`, y=mpg_z, label = mpg_z)) +
+  geom_bar(stat = 'identity', aes(fill=mpg_type), width=0.5) +
+  scale_fill_manual(name = "Mileage",
+                    labels = c("Above Average", "Below Average"),
+                    values = c("above" = "#00ba38","below"="#f8766d"))+
+  labs(subtitle = "Normalized mileage from 'mtcars'",
+       title = "Diverging bars") +
+  coord_flip()
+```
+
+**2.1 Diverging lollipop chart**
+- same as above, except a different form of depiction
+
+```{r, warning=FALSE}
+ggplot(mtcars, aes(x=`car name`, y=mpg_z, label=mpg_z)) + 
+  geom_point(stat='identity', fill="black", size=6)  +
+  geom_segment(aes(y = 0, 
+                   x = `car name`, 
+                   yend = mpg_z, 
+                   xend = `car name`), 
+               color = "black") +
+  geom_text(color="white", size=2) +
+  labs(title="Diverging Lollipop Chart", 
+       subtitle="Normalized mileage from 'mtcars': Lollipop") + 
+  ylim(-2.5, 2.5) +
+  coord_flip()
+```
+
+**2.2 Diverging dot plot**
+- same as above, slightly different way of depicting
+```{r, warning=FALSE}
+ggplot(mtcars, aes(x=`car name`, y=mpg_z, label=mpg_z)) + 
+  geom_point(stat='identity', aes(col=mpg_type), size=6)  +
+  scale_color_manual(name="Mileage", 
+                     labels = c("Above Average", "Below Average"), 
+                     values = c("above"="#00ba38", "below"="#f8766d")) + 
+  geom_text(color="white", size=2) +
+  labs(title="Diverging Dot Plot", 
+       subtitle="Normalized mileage from 'mtcars': Dotplot") + 
+  ylim(-2.5, 2.5) +
+  coord_flip()
+```
+
+**3. Area chart**
+  Area charts are typically used to visualize how a particular metric (such as % returns from a stock) 
+  performed compared to a certain baseline. geom_area() implements this.
+  
+```{r, warning=FALSE} 
+library(quantmod)
+data("economics", package = "ggplot2")
+
+# Compute % Returns
+economics$returns_perc <- c(0, diff(economics$psavert)/economics$psavert[-length(economics$psavert)])
+
+# Create break points and labels for axis ticks
+brks <- economics$date[seq(1, length(economics$date), 12)]
+lbls <- lubridate::year(economics$date[seq(1, length(economics$date), 12)])
+
+# Plot
+ggplot(economics[1:100, ], aes(date, returns_perc)) + 
+  geom_area() + 
+  scale_x_date(breaks=brks, labels=lbls) +       #override default date scales
+  theme(axis.text.x = element_text(angle=90)) +  #Not sure what this line does!
+  labs(title="Area Chart", 
+       subtitle = "Perc Returns for Personal Savings", 
+       y="% Returns for Personal savings", 
+       caption="Source: economics")
+
+ggplot(economics[1:100, ], aes(date, returns_perc)) + 
+  geom_area() + 
+  labs(title="Area Chart", 
+       subtitle = "Perc Returns for Personal Savings", 
+       y="% Returns for Personal savings", 
+       caption="Source: economics")
+```
